@@ -3,6 +3,7 @@ Float_t gPmin;
 Float_t gPmax;
 TF1* gBethe_Bloch_p;
 TF1* gBethe_Bloch_pi;
+TF1* gBethe_Bloch_pi2;
 TF1* gBethe_Bloch_k;
 TF1* GetGaussFitPol(TH1D* h, Float_t p, const Double_t* params);
 TF1* GetGaussFitPol_pi(TH1D* h, Float_t p, const Double_t* params);
@@ -38,16 +39,16 @@ void FitSlices(Int_t runid=1234, Int_t apver=23, Int_t nSlices=15, Int_t saveCal
 
   gBethe_Bloch_p = new TF1("Bethe Bloch", BetheBloch, -0.5, 3, 5); 
   gBethe_Bloch_p->SetParameters(par_p);
-  gBethe_Bloch_p->SetParNames("X0","X1","miu","s","mass");
+  gBethe_Bloch_p->SetParNames("X0", "X1", "miu", "s", "mass");
   gBethe_Bloch_p->FixParameter(4, mass_prot);
 
-  // PION
+//   PION
   Double_t mass_pi = 0.13957;
   Double_t par_pi[] = {X0, X1, miu, s, mass_pi};
 
-  gBethe_Bloch_pi = new TF1("Bethe Bloch pi", BetheBloch, -0.5, 3, 5); 
+  gBethe_Bloch_pi = new TF1("Bethe Bloch pi", BetheBloch, -0.5, 3, 5);
   gBethe_Bloch_pi->SetParameters(par_pi);
-  gBethe_Bloch_pi->SetParNames("X0","X1","miu","s", "mass");
+  gBethe_Bloch_pi->SetParNames("X0", "X1", "miu", "s", "mass");
   gBethe_Bloch_pi->FixParameter(4, mass_pi);
 
   // KAON
@@ -92,13 +93,29 @@ void FitSlices(Int_t runid=1234, Int_t apver=23, Int_t nSlices=15, Int_t saveCal
   float par2 = 0;
   float par3 = 0;
   float par4 = 0;
+
 // Slicing function for pions/protons
   string particle = "proton";
   DyVsY2(nSlices,hr, particle, par1, par2, par3, par4);
 
   string particle2 = "pion";
   DyVsY2(nSlices,hr_pi, particle2, par1, par2, par3, par4);
-// TODO: narysowac teraz piony z referencyjnych danych
+
+//    Double_t X0=1.44;
+//    Double_t X1=4;
+//    Double_t miu=3.77;
+//    Double_t s=1.53;
+
+par1 = TMath::Abs(par1); // DLACZEGO UJEMNA WARTOSC DLA X0 Z PROTONOW WYCHODZI???
+cout << "!!!!!!!!!!!!!!!!!!" << endl;
+cout << "X0 = " << par1 << endl;
+cout << "X1 = " << par2 << endl;
+cout << "miu = " << par3 << endl;
+cout << "s = " << s << endl;
+cout << "!!!!!!!!!!!!!!!!!!" << endl;
+
+
+  // TODO: piony z protonow
 // TODO: poprawic slicowanie pionow bo teraz sa za wysoko
 // TODO: dodac podpisy i kolory ladne
 
@@ -117,48 +134,38 @@ void FitSlices(Int_t runid=1234, Int_t apver=23, Int_t nSlices=15, Int_t saveCal
   TGraphErrors* mean_p     = (TGraphErrors*)list_p->FindObject(Form("Mean"));
   TGraphErrors* mean_pi     = (TGraphErrors*)list_pi->FindObject(Form("Mean"));
 
-    //TGraphErrors* Sigma    = (TGraphErrors*)list->FindObject(Form("Sigma"));
-  //TGraphErrors* SigmaVsMean    = (TGraphErrors*)list->FindObject(Form("SigmaVsMean"));
-  //TGraphErrors* SigmaVsBeta    = (TGraphErrors*)list->FindObject(Form("SigmaVsBeta"));
-  //TGraphErrors* SigmaVsBetaProt    = (TGraphErrors*)list->FindObject(Form("SigmaVsBetaProt"));
-  //TGraphErrors* meanPsigma     = (TGraphErrors*)list->FindObject(Form("MeanPSigma"));
-  //TGraphErrors* meanMsigma     = (TGraphErrors*)list->FindObject(Form("MeanMSigma"));
-
   mg1->Add(mean_p);
   mg1->Add(mean_pi);
-
-    //mg1->Add(SigmaVsBeta);
-  //mg1->Add(SigmaVsBetaProt);
-  //mg1->Add(SigmaVsMean);
-  //mg1->Add(Sigma);
 
 
   hrplot->GetXaxis()->SetTitle("log(p) [GeV/c]");
   hrplot->GetYaxis()->SetTitle("dEdx [arbitrary]");
 
   hrplot->GetListOfFunctions()->Add(mean_p);
-    hrplot->GetListOfFunctions()->Add(mean_pi);
-
-    //hrplot->GetListOfFunctions()->Add(SigmaVsMean);
-  //hrplot->GetListOfFunctions()->Add(meanMsigma);
-  
+  hrplot->GetListOfFunctions()->Add(mean_pi);
 
   hrplot->Draw();
-
   hr_pi->Draw("same");
-  
-  //hr_pi->Draw("same");
 
-//  gBethe_Bloch_p->SetLineColor(2);
+  // Bethe Bloch for pi with parameters from proton fit
+    Double_t par_pi_from_proton[] = {TMath::Abs(par1), par2, par3, par4, mass_pi};
+
+    gBethe_Bloch_pi_from_proton = new TF1("Bethe Bloch pis", BetheBloch, -0.5, 3, 5);
+    gBethe_Bloch_pi_from_proton->SetParameters(par_pi_from_proton);
+    gBethe_Bloch_pi_from_proton->SetParNames("X0", "X1", "miu", "s", "mass");
+    gBethe_Bloch_pi_from_proton->FixParameter(4, mass_pi);
+
+    gBethe_Bloch_pi_from_proton->SetLineColor(1);
+    gBethe_Bloch_pi_from_proton->Draw("same");
+
+
+  //  gBethe_Bloch_p->SetLineColor(2);
 //  gBethe_Bloch_p->SetLineStyle(2);
 //
 //  gBethe_Bloch_p->Draw("same");
 //
-//  gBethe_Bloch_pi->SetLineColor(6);
-//  gBethe_Bloch_pi->Draw("same");
 
-  // gBethe_Bloch_k->SetLineColor(4);
-  // gBethe_Bloch_k->Draw("same");
+
 //
 //  TLatex text;
 //  text.SetTextFont(42);

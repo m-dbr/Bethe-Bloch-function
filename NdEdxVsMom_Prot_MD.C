@@ -3,7 +3,7 @@ Float_t gPmin;
 Float_t gPmax;
 TF1* gBethe_Bloch_p;
 TF1* gBethe_Bloch_pi;
-TF1* gBethe_Bloch_pi2;
+TF1* gBethe_Bloch_pi_from_proton;
 TF1* gBethe_Bloch_k;
 TF1* GetGaussFitPol(TH1D* h, Float_t p, const Double_t* params);
 TF1* GetGaussFitPol_pi(TH1D* h, Float_t p, const Double_t* params);
@@ -114,12 +114,13 @@ cout << "miu = " << par3 << endl;
 cout << "s = " << s << endl;
 cout << "!!!!!!!!!!!!!!!!!!" << endl;
 
-
-  // TODO: piony z protonow
+// TODO: dlaczego X1 wychodzi na minusie??
+// TODO: piony z protonow nie robia sie
+// TODO: protony z pionow cos brzydko wyszly
 // TODO: poprawic slicowanie pionow bo teraz sa za wysoko
 // TODO: dodac podpisy i kolory ladne
 
-// TODO: powtorzyc cala operacje dla pionow
+
 
   TCanvas* c1 = new TCanvas ("dEdx","dEdx",100,100,650,560);
 
@@ -148,7 +149,7 @@ cout << "!!!!!!!!!!!!!!!!!!" << endl;
   hr_pi->Draw("same");
 
   // Bethe Bloch for pi with parameters from proton fit
-    Double_t par_pi_from_proton[] = {TMath::Abs(par1), par2, par3, par4, mass_pi};
+    Double_t par_pi_from_proton[] = {par1, par2, par3, par4, mass_pi};
 
     gBethe_Bloch_pi_from_proton = new TF1("Bethe Bloch pis", BetheBloch, -0.5, 3, 5);
     gBethe_Bloch_pi_from_proton->SetParameters(par_pi_from_proton);

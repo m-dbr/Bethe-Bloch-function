@@ -9,8 +9,7 @@ TF1* GetGaussFitPol_pi(TH1D* h, Float_t p, const Double_t* params);
 
 void TPstyle();
 void DrawSlice(TH1D* h,TCanvas* canv);
-void DyVsY2(Int_t nSlicesInit, TH2F* h2, string particle);
-void DyVsY3(Int_t nSlicesInit, TH2F* h2);
+void DyVsY2(Int_t nSlicesInit, TH2F* h2, string particle, float &par1, float &par2, float &par3, float &par4);
 
 Double_t BetheBloch(Double_t *x, Double_t *par);
 
@@ -89,14 +88,23 @@ void FitSlices(Int_t runid=1234, Int_t apver=23, Int_t nSlices=15, Int_t saveCal
 
   TH2F* hrplot = (TH2F*)hr->Clone("hrplot");
 
+  float par1 = 0;
+  float par2 = 0;
+  float par3 = 0;
+  float par4 = 0;
 // Slicing function for pions/protons
   string particle = "proton";
-  DyVsY2(nSlices,hr, particle);
+  DyVsY2(nSlices,hr, particle, par1, par2, par3, par4);
+
   string particle2 = "pion";
-  DyVsY2(nSlices,hr_pi, particle2);
+  DyVsY2(nSlices,hr_pi, particle2, par1, par2, par3, par4);
+// TODO: narysowac teraz piony z referencyjnych danych
+// TODO: poprawic slicowanie pionow bo teraz sa za wysoko
+// TODO: dodac podpisy i kolory ladne
 
+// TODO: powtorzyc cala operacje dla pionow
 
-    TCanvas* c1 = new TCanvas ("dEdx","dEdx",100,100,650,560);
+  TCanvas* c1 = new TCanvas ("dEdx","dEdx",100,100,650,560);
 
   c1->Divide(1,1);
   c1->cd(1);
@@ -141,13 +149,13 @@ void FitSlices(Int_t runid=1234, Int_t apver=23, Int_t nSlices=15, Int_t saveCal
   
   //hr_pi->Draw("same");
 
-  gBethe_Bloch_p->SetLineColor(2);
-  gBethe_Bloch_p->SetLineStyle(2);
-
-  gBethe_Bloch_p->Draw("same");
-
-  gBethe_Bloch_pi->SetLineColor(6);
-  gBethe_Bloch_pi->Draw("same");
+//  gBethe_Bloch_p->SetLineColor(2);
+//  gBethe_Bloch_p->SetLineStyle(2);
+//
+//  gBethe_Bloch_p->Draw("same");
+//
+//  gBethe_Bloch_pi->SetLineColor(6);
+//  gBethe_Bloch_pi->Draw("same");
 
   // gBethe_Bloch_k->SetLineColor(4);
   // gBethe_Bloch_k->Draw("same");
@@ -169,13 +177,12 @@ void FitSlices(Int_t runid=1234, Int_t apver=23, Int_t nSlices=15, Int_t saveCal
 }
 
 //_______________________________________________________________________
-void DyVsY2(Int_t nSlicesInit, TH2F* h2, string particle)
+void DyVsY2(Int_t nSlicesInit, TH2F* h2, string particle, float &par1, float &par2, float &par3, float &par4)
 {
   // this is general method to perform pid on m2 versus momentum
   // plot. The results are saved in file at path location.
   // path should point to the particular (Tof/Rich) selector
   // pid directory
-
       TH1D *slice[100];
 
       Float_t pmin = gPmin;
@@ -370,44 +377,16 @@ void DyVsY2(Int_t nSlicesInit, TH2F* h2, string particle)
 
           Mean->GetListOfFunctions()->Add(meanFit_prot);
 
-          h2->GetListOfFunctions()->Add(Mean);
+          par1 = meanFit_prot->GetParameter(0);
+          par2 = meanFit_prot->GetParameter(1);
+          par3 = meanFit_prot->GetParameter(2);
+          par4 = meanFit_prot->GetParameter(3);
 
-      } else if (particle == "pion") {
-          TF1 *meanFit_pion = new TF1("Bethe Bloch p", BetheBloch, -0.5, 3, 5);
-          meanFit_pion->SetParNames("X0", "X1", "miu", "s");
-          meanFit_pion->SetLineColor(3);
-          meanFit_pion->SetLineWidth(4);
-          meanFit_pion->SetParameters(gBethe_Bloch_pi->GetParameter(0), gBethe_Bloch_pi->GetParameter(1),
-                                      gBethe_Bloch_pi->GetParameter(2), gBethe_Bloch_pi->GetParameter(3),
-                                      gBethe_Bloch_pi->GetParameter(4));
-          meanFit_pion->FixParameter(4, gBethe_Bloch_pi->GetParameter(4));
-          Mean->Fit(meanFit_pion, "w", "", pmin - 0.1, pmax + 0.1);
-
-          Mean->GetListOfFunctions()->Add(meanFit_pion);
-
-          h2->GetListOfFunctions()->Add(Mean);
       }
 
-      // PION
-      // Te piony są z dopasowania protonu
-      // parametry z dopasowanai protonu powinny opisywac piony
-//      TF1 *meanFit_pion = new TF1("Bethe Bloch pi", BetheBloch, -0.5, 3, 5);
-//      meanFit_pion->SetParNames("X0", "X1", "miu", "s");
-//      meanFit_pion->SetLineColor(3);
-//      meanFit_pion->SetLineWidth(4);
-//      meanFit_pion->SetParameters(meanFit_prot->GetParameter(0), meanFit_prot->GetParameter(1),
-//                                  meanFit_prot->GetParameter(2), meanFit_prot->GetParameter(3),
-//                                  meanFit_prot->GetParameter(4));
-//      meanFit_pion->FixParameter(4, gBethe_Bloch_pi->GetParameter(4));
+      h2->GetListOfFunctions()->Add(Mean);
 
 
-
-      // Mean->GetListOfFunctions()->Add(meanFit_pion);
-
-      // h2->GetListOfFunctions()->Add(Sigma);
-      // h2->GetListOfFunctions()->Add(SigmaVsMean);
-      // h2->GetListOfFunctions()->Add(SigmaVsBeta);
-      // h2->GetListOfFunctions()->Add(SigmaVsBetaProt);
 
       cout << "functions added" << endl;
 }

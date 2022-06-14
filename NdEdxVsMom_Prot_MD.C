@@ -106,7 +106,6 @@ void FitSlices(Int_t runid=1234, Int_t apver=23, Int_t nSlices=15, Int_t saveCal
 //    Double_t miu=3.77;
 //    Double_t s=1.53;
 
-par1 = TMath::Abs(par1); // DLACZEGO UJEMNA WARTOSC DLA X0 Z PROTONOW WYCHODZI???
 cout << "!!!!!!!!!!!!!!!!!!" << endl;
 cout << "X0 = " << par1 << endl;
 cout << "X1 = " << par2 << endl;

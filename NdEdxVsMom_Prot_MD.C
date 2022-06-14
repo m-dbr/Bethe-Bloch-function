@@ -9,7 +9,7 @@ TF1* GetGaussFitPol_pi(TH1D* h, Float_t p, const Double_t* params);
 
 void TPstyle();
 void DrawSlice(TH1D* h,TCanvas* canv);
-void DyVsY2(Int_t nSlicesInit, TH2F* h2);
+void DyVsY2(Int_t nSlicesInit, TH2F* h2, string particle);
 void DyVsY3(Int_t nSlicesInit, TH2F* h2);
 
 Double_t BetheBloch(Double_t *x, Double_t *par);
@@ -90,8 +90,10 @@ void FitSlices(Int_t runid=1234, Int_t apver=23, Int_t nSlices=15, Int_t saveCal
   TH2F* hrplot = (TH2F*)hr->Clone("hrplot");
 
 // Slicing function for pions/protons
-  DyVsY2(nSlices,hr);
-  DyVsY3(nSlices,hr_pi);
+  string particle = "proton";
+  DyVsY2(nSlices,hr, particle);
+  string particle2 = "pion";
+  DyVsY2(nSlices,hr_pi, particle2);
 
 
     TCanvas* c1 = new TCanvas ("dEdx","dEdx",100,100,650,560);
@@ -167,7 +169,7 @@ void FitSlices(Int_t runid=1234, Int_t apver=23, Int_t nSlices=15, Int_t saveCal
 }
 
 //_______________________________________________________________________
-void DyVsY2(Int_t nSlicesInit, TH2F* h2)
+void DyVsY2(Int_t nSlicesInit, TH2F* h2, string particle)
 {
   // this is general method to perform pid on m2 versus momentum
   // plot. The results are saved in file at path location.
@@ -277,8 +279,13 @@ void DyVsY2(Int_t nSlicesInit, TH2F* h2)
           params[5] = sigmB;
 
           cout << "i=" << i << "  pL=" << pL << "   pU=" << pU << "  p=" << 0.5 * (pL + pU) << endl;
+          TF1 *func;
 
-          TF1 *func = GetGaussFitPol(slice[i], 0.5 * (pL + pU), params);
+          if (particle == "proton") {
+              func = GetGaussFitPol(slice[i], 0.5 * (pL + pU), params);
+          } else if (particle == "pion") {
+              func = GetGaussFitPol_pi(slice[i], 0.5 * (pL + pU), params);
+          }
 
           Bool_t drawSlices = kTRUE;
           if (drawSlices) {
@@ -350,16 +357,36 @@ void DyVsY2(Int_t nSlicesInit, TH2F* h2)
       SigmaVsBetaProt->SetLineWidth(3);
 
       // PROTON
+      if (particle == "proton") {
+          TF1 *meanFit_prot = new TF1("Bethe Bloch p", BetheBloch, -0.5, 3, 5);
+          meanFit_prot->SetParNames("X0", "X1", "miu", "s");
+          meanFit_prot->SetLineColor(3);
+          meanFit_prot->SetLineWidth(4);
+          meanFit_prot->SetParameters(gBethe_Bloch_p->GetParameter(0), gBethe_Bloch_p->GetParameter(1),
+                                      gBethe_Bloch_p->GetParameter(2), gBethe_Bloch_p->GetParameter(3),
+                                      gBethe_Bloch_p->GetParameter(4));
+          meanFit_prot->FixParameter(4, gBethe_Bloch_p->GetParameter(4));
+          Mean->Fit(meanFit_prot, "w", "", pmin - 0.1, pmax + 0.1);
 
-      TF1 *meanFit_prot = new TF1("Bethe Bloch p", BetheBloch, -0.5, 3, 5);
-      meanFit_prot->SetParNames("X0", "X1", "miu", "s");
-      meanFit_prot->SetLineColor(3);
-      meanFit_prot->SetLineWidth(4);
-      meanFit_prot->SetParameters(gBethe_Bloch_p->GetParameter(0), gBethe_Bloch_p->GetParameter(1),
-                                  gBethe_Bloch_p->GetParameter(2), gBethe_Bloch_p->GetParameter(3),
-                                  gBethe_Bloch_p->GetParameter(4));
-      meanFit_prot->FixParameter(4, gBethe_Bloch_p->GetParameter(4));
-      Mean->Fit(meanFit_prot, "w", "", pmin - 0.1, pmax + 0.1);
+          Mean->GetListOfFunctions()->Add(meanFit_prot);
+
+          h2->GetListOfFunctions()->Add(Mean);
+
+      } else if (particle == "pion") {
+          TF1 *meanFit_pion = new TF1("Bethe Bloch p", BetheBloch, -0.5, 3, 5);
+          meanFit_pion->SetParNames("X0", "X1", "miu", "s");
+          meanFit_pion->SetLineColor(3);
+          meanFit_pion->SetLineWidth(4);
+          meanFit_pion->SetParameters(gBethe_Bloch_pi->GetParameter(0), gBethe_Bloch_pi->GetParameter(1),
+                                      gBethe_Bloch_pi->GetParameter(2), gBethe_Bloch_pi->GetParameter(3),
+                                      gBethe_Bloch_pi->GetParameter(4));
+          meanFit_pion->FixParameter(4, gBethe_Bloch_pi->GetParameter(4));
+          Mean->Fit(meanFit_pion, "w", "", pmin - 0.1, pmax + 0.1);
+
+          Mean->GetListOfFunctions()->Add(meanFit_pion);
+
+          h2->GetListOfFunctions()->Add(Mean);
+      }
 
       // PION
       // Te piony są z dopasowania protonu
@@ -376,9 +403,7 @@ void DyVsY2(Int_t nSlicesInit, TH2F* h2)
 
 
       // Mean->GetListOfFunctions()->Add(meanFit_pion);
-      Mean->GetListOfFunctions()->Add(meanFit_prot);
 
-      h2->GetListOfFunctions()->Add(Mean);
       // h2->GetListOfFunctions()->Add(Sigma);
       // h2->GetListOfFunctions()->Add(SigmaVsMean);
       // h2->GetListOfFunctions()->Add(SigmaVsBeta);
@@ -387,226 +412,6 @@ void DyVsY2(Int_t nSlicesInit, TH2F* h2)
       cout << "functions added" << endl;
 }
 
-//_______________________________________________________________________
-void DyVsY3(Int_t nSlicesInit, TH2F* h2)
-{
-    // this is general method to perform pid on m2 versus momentum
-    // plot. The results are saved in file at path location.
-    // path should point to the particular (Tof/Rich) selector
-    // pid directory
-
-    TH1D *slice[100];
-
-    Float_t pmin = gPmin;
-    Float_t pmax = gPmax;
-
-
-    Float_t pstepInit = (pmax - pmin) / nSlicesInit;
-    cout << "initial hbw/2 is " << pstepInit / 2. << endl;
-
-    Float_t pstep = pstepInit;
-
-    //Float_t pL = pmin;
-    //Float_t pU;
-    Int_t nSlices = 0;
-
-    Float_t pstep_array[] = {3.3, 3.3, 3.3, 3.3, 3.3, 3.3, 3.3, 3.3, 4, 5, 6};
-    nSlicesInit = sizeof(pstep_array) / 4;
-
-    Float_t pL;
-    Float_t pU;
-
-    for (Int_t i = 0; i < nSlicesInit; i++) {
-        //if(i>0)pL = pU;
-        // if(pL>7)pstep = 2*pstepInit;
-        //pU = pL + pstep_array[i];
-
-        cout << "DyVsY2: number of slices is: " << nSlicesInit << endl;
-        //pU = pmin + pstep * (i+1);
-        pL = pmin + pstep * i;
-        pU = pmin + pstep * (i + 1);
-
-        Int_t binL = h2->GetXaxis()->FindBin(pL);
-        Int_t binU = h2->GetXaxis()->FindBin(pU);
-        Float_t p = 0.5 * (pL + pU);
-        // if(p>pmax)break;
-        nSlices++;
-        slice[i] = (TH1D *) h2->ProjectionY(Form("slice%d", i), binL, binU);
-        slice[i]->SetTitle(Form("p range: %f - %f GeV/c", pL, pU));
-        slice[i]->Sumw2();
-        //slice[i]->Rebin(binsToMerge);
-        //slice[i]->Scale(1./(Float_t)binsToMerge);
-        cout << "i=" << i << "  pL=" << pL << "   pU=" << pU << " max=" << slice[i]->GetMaximum() << endl;
-        if (slice[i]->GetMaximum() < 3) {
-            slice[i]->Rebin(2);
-            //slice[i]->Scale(1./(Float_t)2);
-        }
-    }
-
-    pmax = pU;
-
-    cout << "Starting initial fit of slices" << endl;
-
-    Float_t momPart[100];
-    Float_t momPartErr[100];
-    Float_t meanPart[100];
-    Float_t meanPartErr[100];
-    Float_t sigmaPart[100];
-    Float_t sigmaPartProt[100];
-    Float_t sigmaPartErr[100];
-    Float_t betaPart[100];
-    Float_t betaPartProt[100];
-    Float_t betaPartErr[100];
-
-    pL = pmin;
-    pstep = pstepInit;
-
-    for (Int_t i = 0; i < nSlicesInit; i++) {
-        Float_t pL = pmin + pstep * i;
-        Float_t pU = pmin + pstep * (i + 1);
-        //if(i>0)pL = pU;
-        // if(pL>7)pstep = 2*pstepInit;
-        //pU = pL + pstep_array[i];
-        Int_t binL = h2->GetXaxis()->FindBin(pL);
-        Int_t binU = h2->GetXaxis()->FindBin(pU);
-        Float_t p = 0.5 * (pL + pU);
-        // if(p>pmax)break;
-
-        TH1D *h = slice[i];
-
-        // najwieksza lp zliczen:
-        Int_t maxBin = h->GetMaximumBin();
-        // max w binie
-        Float_t cons = h->GetMaximum();
-        // wartosc dla srodka binu
-        Float_t mean = h->GetBinCenter(maxBin);
-        Float_t sigm = 1.3;
-
-        // ewentualne tło
-        Float_t consB = h->GetBinContent(maxBin / 2);
-        Float_t meanB = h->GetBinCenter(maxBin);
-        Float_t sigmB = 100 * sigm;
-
-        // do fitu parametry
-        Double_t params[6];
-
-        params[0] = cons;
-        params[1] = mean;
-        params[2] = sigm;
-        params[3] = consB;
-        params[4] = meanB;
-        params[5] = sigmB;
-
-        cout << "i=" << i << "  pL=" << pL << "   pU=" << pU << "  p=" << 0.5 * (pL + pU) << endl;
-
-        TF1 *func = GetGaussFitPol_pi(slice[i], 0.5 * (pL + pU), params);
-
-        Bool_t drawSlices = kTRUE;
-        if (drawSlices) {
-            cnv[i] = new TCanvas(Form("slice%d", i), Form("slice%d", i), 5 * i, 5 * i, 400, 560);
-            cnv[i]->SetTopMargin(0.02);
-            cnv[i]->SetRightMargin(0.05);
-            cnv[i]->SetLeftMargin(0.16);
-            cnv[i]->SetBottomMargin(0.15);
-            cnv[i]->Divide(1, 1);
-
-            DrawSlice(slice[i], cnv[i]);
-        }
-
-
-        momPart[i] = p;
-        momPartErr[i] = p * 0.005; // this should depend on field settings
-        meanPart[i] = func->GetParameter(1); // to co powinien dawac Bethe Bloch
-        meanPartErr[i] = TMath::Abs(func->GetParError(1));
-        sigmaPart[i] = TMath::Abs(func->GetParameter(2));
-        sigmaPartErr[i] = TMath::Abs(func->GetParError(2));
-        betaPart[i] = p / TMath::Sqrt(p * p + 0.880354496);
-        betaPartErr[i] = betaPart[i] * 0.000001;
-
-    }
-
-
-    h2->GetListOfFunctions()->Clear();
-
-    TGraphErrors *Mean = new TGraphErrors(nSlices, momPart, meanPart, momPartErr, meanPartErr);
-    TGraphErrors *Sigma = new TGraphErrors(nSlices, momPart, sigmaPart, momPartErr, sigmaPartErr);
-    TGraphErrors *SigmaVsMean = new TGraphErrors(nSlices, meanPart, sigmaPart, meanPartErr, sigmaPartErr);
-    TGraphErrors *SigmaVsBeta = new TGraphErrors(nSlices, betaPart, sigmaPart, betaPartErr, sigmaPartErr);
-    TGraphErrors *SigmaVsBetaProt = new TGraphErrors(nSlices, betaPartProt, sigmaPartProt, betaPartErr, sigmaPartErr);
-
-    Mean->SetName(Form("Mean"));
-    Sigma->SetName(Form("Sigma"));
-    SigmaVsMean->SetName("SigmaVsMean");
-    SigmaVsBeta->SetName("SigmaVsBeta");
-    SigmaVsBetaProt->SetName("SigmaVsBetaProt");
-
-    Mean->SetMarkerStyle(20);
-    Mean->SetMarkerSize(0.05);
-    Mean->SetMarkerColor(2);
-    Mean->SetLineColor(2);
-    Mean->SetLineWidth(3);
-
-    Sigma->SetMarkerStyle(20);
-    Sigma->SetMarkerSize(0.05);
-    Sigma->SetMarkerColor(4);
-    Sigma->SetLineColor(4);
-    Sigma->SetLineWidth(3);
-
-    SigmaVsMean->SetMarkerStyle(20);
-    SigmaVsMean->SetMarkerSize(0.05);
-    SigmaVsMean->SetMarkerColor(4);
-    SigmaVsMean->SetLineColor(4);
-    SigmaVsMean->SetLineWidth(3);
-
-    SigmaVsBeta->SetMarkerStyle(20);
-    SigmaVsBeta->SetMarkerSize(0.05);
-    SigmaVsBeta->SetMarkerColor(6);
-    SigmaVsBeta->SetLineColor(4);
-    SigmaVsBeta->SetLineWidth(3);
-
-    SigmaVsBetaProt->SetMarkerStyle(20);
-    SigmaVsBetaProt->SetMarkerSize(0.05);
-    SigmaVsBetaProt->SetMarkerColor(2);
-    SigmaVsBetaProt->SetLineColor(2);
-    SigmaVsBetaProt->SetLineWidth(3);
-
-    // PROTON
-
-    TF1 *meanFit_pion = new TF1("Bethe Bloch p", BetheBloch, -0.5, 3, 5);
-    meanFit_pion->SetParNames("X0", "X1", "miu", "s");
-    meanFit_pion->SetLineColor(3);
-    meanFit_pion->SetLineWidth(4);
-    meanFit_pion->SetParameters(gBethe_Bloch_pi->GetParameter(0), gBethe_Bloch_pi->GetParameter(1),
-                                gBethe_Bloch_pi->GetParameter(2), gBethe_Bloch_pi->GetParameter(3),
-                                gBethe_Bloch_pi->GetParameter(4));
-    meanFit_pion->FixParameter(4, gBethe_Bloch_pi->GetParameter(4));
-    Mean->Fit(meanFit_pion, "w", "", pmin - 0.1, pmax + 0.1);
-
-    // PION
-    // Te piony są z dopasowania protonu
-    // parametry z dopasowanai protonu powinny opisywac piony
-//      TF1 *meanFit_pion = new TF1("Bethe Bloch pi", BetheBloch, -0.5, 3, 5);
-//      meanFit_pion->SetParNames("X0", "X1", "miu", "s");
-//      meanFit_pion->SetLineColor(3);
-//      meanFit_pion->SetLineWidth(4);
-//      meanFit_pion->SetParameters(meanFit_prot->GetParameter(0), meanFit_prot->GetParameter(1),
-//                                  meanFit_prot->GetParameter(2), meanFit_prot->GetParameter(3),
-//                                  meanFit_prot->GetParameter(4));
-//      meanFit_pion->FixParameter(4, gBethe_Bloch_pi->GetParameter(4));
-
-
-
-    // Mean->GetListOfFunctions()->Add(meanFit_pion);
-    Mean->GetListOfFunctions()->Add(meanFit_pion);
-
-    h2->GetListOfFunctions()->Add(Mean);
-    // h2->GetListOfFunctions()->Add(Sigma);
-    // h2->GetListOfFunctions()->Add(SigmaVsMean);
-    // h2->GetListOfFunctions()->Add(SigmaVsBeta);
-    // h2->GetListOfFunctions()->Add(SigmaVsBetaProt);
-
-    cout << "functions added" << endl;
-}
 
 //___________________________________________________________________________
 void DrawSlice(TH1D* h,TCanvas* canv)

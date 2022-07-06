@@ -3,7 +3,7 @@ Float_t gPmin;
 Float_t gPmax;
 TF1* gBethe_Bloch_p;
 TF1* gBethe_Bloch_pi;
-TF1* gBethe_Bloch_pi_from_proton;
+TF1* gBethe_Bloch_p_from_pion;
 TF1* gBethe_Bloch_k;
 TF1* GetGaussFitPol(TH1D* h, Float_t p, const Double_t* params);
 TF1* GetGaussFitPol_pi(TH1D* h, Float_t p, const Double_t* params);
@@ -15,7 +15,7 @@ void DyVsY2(Int_t nSlicesInit, TH2F* h2, string particle, float &par1, float &pa
 Double_t BetheBloch(Double_t *x, Double_t *par);
 
 //___________MAIN FUNCTION_______________________________________________________________________//
-void FitSlices(Int_t slic=1, Int_t runid=1234, Int_t apver=4, Int_t nSlices=15, Int_t saveCalibParams=0)
+void FitSlices(Int_t runid=1234, Int_t apver=23, Int_t nSlices=15, Int_t saveCalibParams=0)
 {
 
   gStyle->SetOptStat(0);
@@ -96,40 +96,23 @@ void FitSlices(Int_t slic=1, Int_t runid=1234, Int_t apver=4, Int_t nSlices=15, 
 
 // Slicing function for pions/protons
   string particle = "proton";
-  gPmin=0.9;
-  gPmax=1.4;
   DyVsY2(nSlices,hr, particle, par1, par2, par3, par4);
 
-  cout << "!!!!!!!!!!!!!!" << endl;
-  cout << par1 << endl;
-  cout << par2 << endl;
-  cout << par3 << endl;
-  cout << par4 << endl;
-  cout << "!!!!!!!!!!!!!!" << endl;
-
-  if ( slic == 0 ) {
-      string particle2 = "pion";
-      gPmin=0.5;
-      gPmax=1.2;
-      DyVsY2(nSlices,hr_pi, particle2, par1, par2, par3, par4);
-      cout << "!!!!!!!!!!!!!!" << endl;
-      cout << par1 << endl;
-      cout << par2 << endl;
-      cout << par3 << endl;
-      cout << par4 << endl;
-      cout << "!!!!!!!!!!!!!!" << endl;
-//      -0.717312
-//  1.9083
-//  4.43072
-//  2.21258
-
-  }
-
+  string particle2 = "pion";
+  DyVsY2(nSlices,hr_pi, particle2, par1, par2, par3, par4);
 
 //    Double_t X0=1.44;
 //    Double_t X1=4;
 //    Double_t miu=3.77;
 //    Double_t s=1.53;
+
+  par1 = TMath::Abs(par1); // DLACZEGO UJEMNA WARTOSC DLA X0 Z PROTONOW WYCHODZI???
+  cout << "!!!!!!!!!!!!!!!!!!" << endl;
+  cout << "X0 = " << par1 << endl;
+  cout << "X1 = " << par2 << endl;
+  cout << "miu = " << par3 << endl;
+  cout << "s = " << s << endl;
+  cout << "!!!!!!!!!!!!!!!!!!" << endl;
 
   TCanvas* c1 = new TCanvas ("dEdx","dEdx",100,100,650,560);
 
@@ -137,77 +120,47 @@ void FitSlices(Int_t slic=1, Int_t runid=1234, Int_t apver=4, Int_t nSlices=15, 
   c1->cd(1);
 
   TList* list_p = hr->GetListOfFunctions();
-
+  TList* list_pi = hr_pi->GetListOfFunctions();
 
   TMultiGraph* mg1 = new TMultiGraph();
   
   TGraphErrors* mean_p     = (TGraphErrors*)list_p->FindObject(Form("Mean"));
-//  TF1* Bethe_Bloch_p    = mean_p->GetFunction("Bethe_Bloch_p");
-  TF1* Bethe_Bloch_p    = (TF1*)list_p->FindObject(Form("Bethe_Bloch_p"));
-
-
-    cout << "PAR1= " << Bethe_Bloch_p->GetParameter(0) << endl;
-    cout << "PAR2= " << Bethe_Bloch_p->GetParameter(1) << endl;
-    cout << "PAR3= " << Bethe_Bloch_p->GetParameter(2) << endl;
-    cout << "PAR4= " << Bethe_Bloch_p->GetParameter(3) << endl;
-    cout << "PAR5= " << Bethe_Bloch_p->GetParameter(4) << endl;
-
-
-
-  cout << "mean_p " << mean_p << endl;
-  cout << "Bethe_Bloch_p " << Bethe_Bloch_p << endl;
-
-
-
-
-    if (slic == 0 ) {
-        TList* list_pi = hr_pi->GetListOfFunctions();
-        TGraphErrors* mean_pi = (TGraphErrors*)list_pi->FindObject(Form("Mean"));
-        mg1->Add(mean_pi);
-        hrplot->GetListOfFunctions()->Add(mean_pi);
-    }
+  TGraphErrors* mean_pi     = (TGraphErrors*)list_pi->FindObject(Form("Mean"));
 
   mg1->Add(mean_p);
+  mg1->Add(mean_pi);
 
   hrplot->GetXaxis()->SetTitle("log(p) [GeV/c]");
   hrplot->GetYaxis()->SetTitle("dEdx [arbitrary]");
 
   hrplot->GetListOfFunctions()->Add(mean_p);
-//  hrplot->GetListOfFunctions()->Add(mean_pi);
+  hrplot->GetListOfFunctions()->Add(mean_pi);
 
   hrplot->Draw();
   hr_pi->Draw("same");
 
-//  Bethe_Bloch_p->SetRange(0, 2.5);
-//  Bethe_Bloch_p->SetLineColor(6);
-//  Bethe_Bloch_p->Draw("same");
+  // Bethe Bloch for pi with parameters from proton fit
+  Double_t par_p_from_pion[] = {par1, par2, par3, par4, mass_prot};
+
+  gBethe_Bloch_p_from_pion = new TF1("Bethe Bloch pis", BetheBloch, -0.5, 3, 5);
+  gBethe_Bloch_p_from_pion->SetParameters(par_p_from_pion);
+  gBethe_Bloch_p_from_pion->SetParNames("X0", "X1", "miu", "s", "mass");
+  gBethe_Bloch_p_from_pion->FixParameter(4, mass_prot);
+  gBethe_Bloch_p_from_pion->SetLineColor(3);
+  gBethe_Bloch_p_from_pion->SetLineWidth(4);
+  gBethe_Bloch_p_from_pion->Draw("same");
 
 
+  gBethe_Bloch_p->SetLineColor(2);
+  gBethe_Bloch_p->SetLineStyle(4);
+  gBethe_Bloch_p->SetLineWidth(4);
+  gBethe_Bloch_p->Draw("same");
 
-    // Bethe Bloch for pi with parameters from proton fit
-    Double_t par_pi_from_proton[] = {par1, par2, par3, par4, mass_pi};
+  gBethe_Bloch_pi->SetLineColor(2);
+  gBethe_Bloch_pi->SetLineStyle(4);
+  gBethe_Bloch_pi->SetLineWidth(4);
+  gBethe_Bloch_pi->Draw("same");
 
-    cout << "!!!!!!!!!!!!!!" << endl;
-    cout << par1 << endl;
-    cout << par2 << endl;
-    cout << par3 << endl;
-    cout << par4 << endl;
-    cout << "!!!!!!!!!!!!!!" << endl;
-
-    gBethe_Bloch_pi_from_proton = new TF1("Bethe Bloch pis", BetheBloch, -0.5, 3, 5);
-    gBethe_Bloch_pi_from_proton->SetParameters(par_pi_from_proton);
-    gBethe_Bloch_pi_from_proton->SetParNames("X0", "X1", "miu", "s", "mass");
-//    gBethe_Bloch_pi_from_proton->FixParameter(4, mass_pi);
-
-    gBethe_Bloch_pi_from_proton->SetLineColor(1);
-    gBethe_Bloch_pi_from_proton->Draw("same");
-
-
-  //  gBethe_Bloch_p->SetLineColor(2);
-//  gBethe_Bloch_p->SetLineStyle(2);
-//
-//  gBethe_Bloch_p->Draw("same");
-//
 
 
 //
@@ -219,11 +172,11 @@ void FitSlices(Int_t slic=1, Int_t runid=1234, Int_t apver=4, Int_t nSlices=15, 
   
   return;  
 
-//  TCanvas* c2 = new TCanvas ("sigmaVsmean","",200,200,650,560);
-//
-//  c2->Divide(1,1);
-//  c2->cd(1);
-//  mg1->Draw("a");
+  TCanvas* c2 = new TCanvas ("sigmaVsmean","",200,200,650,560);
+  
+  c2->Divide(1,1);
+  c2->cd(1); 
+  mg1->Draw("a");
   
 }
 
@@ -249,8 +202,8 @@ void DyVsY2(Int_t nSlicesInit, TH2F* h2, string particle, float &par1, float &pa
       //Float_t pU;
       Int_t nSlices = 0;
 
-//      Float_t pstep_array[] = {3.3, 3.3, 3.3, 3.3, 3.3, 3.3, 3.3, 3.3, 4, 5, 6};
-//      nSlicesInit = sizeof(pstep_array) / 4;
+      Float_t pstep_array[] = {3.3, 3.3, 3.3, 3.3, 3.3, 3.3, 3.3, 3.3, 4, 5, 6};
+      nSlicesInit = sizeof(pstep_array) / 4;
 
       Float_t pL;
       Float_t pU;
@@ -414,34 +367,29 @@ void DyVsY2(Int_t nSlicesInit, TH2F* h2, string particle, float &par1, float &pa
       SigmaVsBetaProt->SetLineColor(2);
       SigmaVsBetaProt->SetLineWidth(3);
 
-      // PROTON
-    TF1 *meanFit_prot = 0;
+      // PION
+      if (particle == "pion") {
+          TF1 *meanFit_pion = new TF1("Bethe Bloch p", BetheBloch, -0.5, 3, 5);
+          meanFit_pion->SetParNames("X0", "X1", "miu", "s");
+          meanFit_pion->SetLineColor(3);
+          meanFit_pion->SetLineWidth(4);
+          meanFit_pion->SetParameters(gBethe_Bloch_pi->GetParameter(0), gBethe_Bloch_pi->GetParameter(1),
+                                      gBethe_Bloch_pi->GetParameter(2), gBethe_Bloch_pi->GetParameter(3),
+                                      gBethe_Bloch_pi->GetParameter(4));
+          meanFit_pion->FixParameter(4, gBethe_Bloch_pi->GetParameter(4));
+          Mean->Fit(meanFit_pion, "w", "", pmin - 0.1, pmax + 0.1);
 
-    if (particle == "proton") {
-          meanFit_prot = new TF1("Bethe_Bloch_p", BetheBloch, -0.5, 3, 5);
-          meanFit_prot->SetParNames("X0", "X1", "miu", "s");
-          meanFit_prot->SetLineColor(3);
-          meanFit_prot->SetLineWidth(4);
-          meanFit_prot->SetParameters(gBethe_Bloch_p->GetParameter(0), gBethe_Bloch_p->GetParameter(1),
-                                      gBethe_Bloch_p->GetParameter(2), gBethe_Bloch_p->GetParameter(3),
-                                      gBethe_Bloch_p->GetParameter(4));
-          meanFit_prot->FixParameter(4,  gBethe_Bloch_p->GetParameter(4));
-          Mean->Fit(meanFit_prot, "w", "", pmin - 0.1, pmax + 0.1);
+          Mean->GetListOfFunctions()->Add(meanFit_pion);
 
-          cout << " gBethe_Bloch_p->GetParameter(4) = " << gBethe_Bloch_p->GetParameter(4) << endl;
-          cout << " meanFit_prot = " <<meanFit_prot->GetParameter(4) << endl;
-
-          Mean->GetListOfFunctions()->Add(meanFit_prot);
-
-          par1 = meanFit_prot->GetParameter(0);
-          par2 = meanFit_prot->GetParameter(1);
-          par3 = meanFit_prot->GetParameter(2);
-          par4 = meanFit_prot->GetParameter(3);
+          par1 = meanFit_pion->GetParameter(0);
+          par2 = meanFit_pion->GetParameter(1);
+          par3 = meanFit_pion->GetParameter(2);
+          par4 = meanFit_pion->GetParameter(3);
 
       }
 
       h2->GetListOfFunctions()->Add(Mean);
-    h2->GetListOfFunctions()->Add(meanFit_prot);
+
 
 
       cout << "functions added" << endl;

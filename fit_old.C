@@ -203,12 +203,12 @@ void fit()
    Double_t xuplim; // The upper bound (or zero if no limits)
    Int_t iuint;     // The internal parameter number 
    Int_t i = 0;
-   Double_t currentPar[3] = {0,0,0};
+   Double_t currentPar[npars] = {0};
    for (i=0; i< npars;i++) {
       gMinuit->mnpout(i, chnam, currentPar[i], errl, xlolim, xuplim, iuint);
    }
 // 1. Linear function
-     TF1 *fun_1=new TF1("fun_1",myFunc_1,1.0,3.0,2); 	
+     TF1 *fun_1 = new TF1("fun_1",myFunc_1,1.0,3.0,2); 	
 
      fun_1->SetParameters(currentPar);
      fun_1->SetLineColor(kBlue);
